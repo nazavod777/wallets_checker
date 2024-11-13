@@ -229,7 +229,7 @@ func getTokenBalances(accountAddress string, chains []string) map[string][]custo
 				continue
 			}
 
-			if err := json.Unmarshal(respBody, responseData); err != nil {
+			if err = json.Unmarshal(respBody, responseData); err != nil {
 				log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 				continue
 			}
@@ -298,7 +298,7 @@ func getPoolBalances(accountAddress string) map[string]map[string][]customTypes.
 
 		responseData := &responseStruct{}
 
-		if err := json.Unmarshal(respBody, responseData); err != nil {
+		if err = json.Unmarshal(respBody, responseData); err != nil {
 			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 			continue
 		}
@@ -384,7 +384,7 @@ func getNftBalances(accountAddress string, chains []string) map[string][]customT
 
 			responseData := &responseStruct{}
 
-			if err := json.Unmarshal(respBody, responseData); err != nil {
+			if err = json.Unmarshal(respBody, responseData); err != nil {
 				log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 				continue
 			}

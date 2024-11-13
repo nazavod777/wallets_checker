@@ -24,53 +24,64 @@ func FormatResult(accountData string,
 
 	formattedResult += fmt.Sprintf("==================== Account Data: %s\n", accountData)
 	formattedResult += fmt.Sprintf("==================== Address: %s\n", accountAddress)
-	formattedResult += fmt.Sprintf("==================== USD Balance: %f $\n\n", totalUsdBalance)
-	formattedResult += fmt.Sprintf("========== Token Balances\n")
+	formattedResult += fmt.Sprintf("==================== USD Balance: %f $\n", totalUsdBalance)
 
-	for _, chainName := range getKeys(tokenBalances) {
-		if len(tokenBalances[chainName]) < 1 {
-			continue
-		}
+	if ConfigFile.DebankConfig.ParseTokens == true && len(tokenBalances) > 0 {
+		formattedResult += fmt.Sprintf("\n========== Token Balances\n")
 
-		formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
-
-		for _, tokenData := range tokenBalances[chainName] {
-			formattedResult += fmt.Sprintf("Name: %s | Balance (in usd): %s $ | Amount: %s\n", tokenData.Name, tokenData.BalanceUSD.Text('f', -1), tokenData.Amount.Text('f', -1))
-		}
-	}
-
-	formattedResult += fmt.Sprintf("\n\n========== NFT Balances\n")
-
-	for _, chainName := range getKeys(nftBalances) {
-		if len(nftBalances[chainName]) < 1 {
-			continue
-		}
-
-		formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
-
-		for _, nftData := range nftBalances[chainName] {
-			formattedResult += fmt.Sprintf("Name: %s | Price (in usd): %s $ | Amount: %s\n", nftData.Name, nftData.PriceUSD.Text('f', -1), nftData.Amount.Text('f', -1))
-		}
-	}
-
-	formattedResult += fmt.Sprintf("\n\n========== Pool Balances\n")
-
-	for _, chainName := range getKeys(poolsData) {
-		if len(poolsData[chainName]) < 1 {
-			continue
-		}
-
-		formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
-
-		for _, poolName := range getKeys(poolsData[chainName]) {
-			if len(poolsData[chainName][poolName]) < 1 {
+		for _, chainName := range getKeys(tokenBalances) {
+			if len(tokenBalances[chainName]) < 1 {
 				continue
 			}
 
-			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(poolName))
+			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
 
-			for _, poolData := range poolsData[chainName][poolName] {
-				formattedResult += fmt.Sprintf("Name: %s | Balance (in usd): %s $ | Amount: %s\n", poolData.Name, poolData.BalanceUSD.Text('f', -1), poolData.Amount.Text('f', -1))
+			for _, tokenData := range tokenBalances[chainName] {
+				formattedResult += fmt.Sprintf("Name: %s | Balance (in usd): %s $ | Amount: %s\n", tokenData.Name, tokenData.BalanceUSD.Text('f', -1), tokenData.Amount.Text('f', -1))
+			}
+		}
+	} else {
+		formattedResult += "\n"
+	}
+
+	if ConfigFile.DebankConfig.ParseNfts == true && len(nftBalances) > 0 {
+		formattedResult += fmt.Sprintf("\n========== NFT Balances\n")
+
+		for _, chainName := range getKeys(nftBalances) {
+			if len(nftBalances[chainName]) < 1 {
+				continue
+			}
+
+			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
+
+			for _, nftData := range nftBalances[chainName] {
+				formattedResult += fmt.Sprintf("Name: %s | Price (in usd): %s $ | Amount: %s\n", nftData.Name, nftData.BalanceUSD.Text('f', -1), nftData.Amount.Text('f', -1))
+			}
+		}
+	} else {
+		formattedResult += "\n"
+	}
+
+	if ConfigFile.DebankConfig.ParsePools == true && len(poolsData) > 0 {
+		formattedResult += fmt.Sprintf("\n========== Pool Balances\n")
+
+		for _, chainName := range getKeys(poolsData) {
+			if len(poolsData[chainName]) < 1 {
+				continue
+			}
+
+			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
+
+			for _, poolName := range getKeys(poolsData[chainName]) {
+				if len(poolsData[chainName][poolName]) < 1 {
+					continue
+				}
+
+				formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(poolName))
+
+				for _, poolData := range poolsData[chainName][poolName] {
+					formattedResult += fmt.Sprintf("Name: %s | Balance (in usd): %s $ | Amount: %s\n", poolData.Name, poolData.BalanceUSD.Text('f', -1), poolData.Amount.Text('f', -1))
+				}
 			}
 		}
 	}

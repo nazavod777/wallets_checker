@@ -3,36 +3,77 @@ package utils
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
-var proxyFormatsRegexp = []*regexp.Regexp{
-	// protocol://login:password@host:port
-	regexp.MustCompile(`^(?:(?P<protocol>.+)://)?(?P<login>[^:]+):(?P<password>[^@|:]+)[@|:](?P<host>[^:]+):(?P<port>\d+)$`),
-	// protocol://host:port@login:password
-	regexp.MustCompile(`^(?:(?P<protocol>.+)://)?(?P<host>[^:]+):(?P<port>\d+)[@|:](?P<login>[^:]+):(?P<password>[^:]+)$`),
-	// host:port
-	regexp.MustCompile(`^(?:(?P<protocol>.+)://)?(?P<host>[^:]+):(?P<port>\d+)$`),
-}
-
 func ParseProxy(proxy string) (string, error) {
-	for _, pattern := range proxyFormatsRegexp {
-		match := pattern.FindStringSubmatch(proxy)
-		if match != nil {
-			protocol := match[1]
-			if protocol == "" {
-				protocol = "http"
-			}
-			login := match[2]
-			password := match[3]
-			host := match[4]
-			port := match[5]
+	patterns := []struct {
+		regex    *regexp.Regexp
+		template string
+	}{
+		// ip:port
+		{
+			regexp.MustCompile(`^([^:@]+):(\d+)$`),
+			"%s://%s:%s",
+		},
+		// scheme://ip:port
+		{
+			regexp.MustCompile(`^((?:http|https|socks4|socks5)://)([^:@]+):(\d+)$`),
+			"%s%s:%s",
+		},
+		// scheme://user:pass@ip:port
+		{
+			regexp.MustCompile(`^((?:http|https|socks4|socks5)://)?([^:@]+):([^:@]+)@([^:@]+):(\d+)$`),
+			"%s://%s:%s@%s:%s",
+		},
+		// scheme://user:pass:ip:port
+		{
+			regexp.MustCompile(`^((?:http|https|socks4|socks5)://)?([^:@]+):([^:@]+):([^:@]+):(\d+)$`),
+			"%s://%s:%s@%s:%s",
+		},
+		// scheme://ip:port@user:pass
+		{
+			regexp.MustCompile(`^((?:http|https|socks4|socks5)://)?([^:@]+):(\d+)@([^:@]+):([^:@]+)$`),
+			"%s://%s:%s@%s:%s",
+		},
+		// scheme://ip:port:user:pass
+		{
+			regexp.MustCompile(`^((?:http|https|socks4|socks5)://)?([^:@]+):(\d+):([^:@]+):([^:@]+)$`),
+			"%s://%s:%s@%s:%s",
+		},
+	}
 
-			if login != "" && password != "" {
-				return fmt.Sprintf("%s://%s:%s@%s:%s", protocol, login, password, host, port), nil
+	for _, pattern := range patterns {
+		matches := pattern.regex.FindStringSubmatch(proxy)
+		if matches == nil {
+			continue
+		}
+
+		switch len(matches) {
+		case 3: // Простой формат ip:port
+			return fmt.Sprintf(pattern.template, "http", matches[1], matches[2]), nil
+		case 4: // Формат scheme://ip:port
+			return fmt.Sprintf(pattern.template, matches[1], matches[2], matches[3]), nil
+		case 6: // Форматы с user:pass
+			scheme := matches[1]
+			if scheme == "" {
+				scheme = "http://"
 			}
-			return fmt.Sprintf("%s://%s:%s", protocol, host, port), nil
+			scheme = strings.TrimSuffix(scheme, "://")
+
+			if strings.Contains(pattern.template, "@") {
+				if isPort(matches[3]) {
+					return fmt.Sprintf(pattern.template, scheme, matches[4], matches[5], matches[2], matches[3]), nil
+				}
+				return fmt.Sprintf(pattern.template, scheme, matches[2], matches[3], matches[4], matches[5]), nil
+			}
 		}
 	}
 
-	return "", fmt.Errorf("invalid proxy format")
+	return "", fmt.Errorf("invalid proxy format: %s", proxy)
+}
+
+func isPort(s string) bool {
+	match, _ := regexp.MatchString(`^\d+$`, s)
+	return match
 }

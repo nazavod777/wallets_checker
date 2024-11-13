@@ -1,0 +1,7 @@
+{
+  "debank_config": {
+    "parse_tokens": true,
+    "parse_nfts": true,
+    "parse_pools": true
+  }
+}

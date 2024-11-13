@@ -24,12 +24,20 @@ type PoolBalancesResultData struct {
 }
 
 type NftBalancesResultData struct {
-	Amount   *big.Float `json:"amount"`
-	Name     string     `json:"name"`
-	PriceUSD *big.Float `json:"price_usd"`
+	Amount     *big.Float `json:"amount"`
+	Name       string     `json:"name"`
+	BalanceUSD *big.Float `json:"price_usd"`
 }
 
 type RabbyReturnData struct {
 	ChainName    string  `json:"chain_name"`
 	ChainBalance float64 `json:"chain_balance"`
+}
+
+type ConfigStruct struct {
+	DebankConfig struct {
+		ParseTokens bool `json:"parse_tokens"`
+		ParseNfts   bool `json:"parse_nfts"`
+		ParsePools  bool `json:"parse_pools"`
+	} `json:"debank_config"`
 }

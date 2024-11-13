@@ -8,7 +8,15 @@ import (
 	"github.com/valyala/fasthttp"
 	"log"
 	"net/url"
+	"sort"
 )
+
+func SortByChainBalance(data []customTypes.RabbyReturnData) {
+	sort.Slice(data, func(i, j int) bool {
+		// Sort in descending order by ChainBalance
+		return data[i].ChainBalance > data[j].ChainBalance
+	})
+}
 
 func getTotalBalance(accountAddress string) (float64, []customTypes.RabbyReturnData) {
 	baseURL := "https://api.rabby.io/v1/user/total_balance"
@@ -87,6 +95,7 @@ func ParseRabbyAccount(accountData string) {
 	}
 
 	totalUsdBalance, chainBalances := getTotalBalance(accountAddress)
+	SortByChainBalance(chainBalances)
 
 	var formattedResult string
 

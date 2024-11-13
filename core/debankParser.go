@@ -9,7 +9,9 @@ import (
 	"log"
 	"math/big"
 	"net/url"
+	"sort"
 	"strings"
+	"time"
 )
 
 type CustomBigFloat struct {
@@ -65,7 +67,7 @@ func doRequest(accountAddress string,
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
 
-	if err := client.Do(req, resp); err != nil {
+	if err = client.Do(req, resp); err != nil {
 		return nil, fmt.Errorf("%s | Request error: %v", accountAddress, err)
 	}
 
@@ -82,10 +84,10 @@ func getTotalUsdBalance(accountAddress string) float64 {
 	baseURL := "https://api.debank.com/asset/net_curve_24h"
 	path := "/asset/net_curve_24h"
 	params := url.Values{}
-	params.Set("user_addr", accountAddress)
+	params.Set("user_addr", strings.ToLower(accountAddress))
 
 	payload := map[string]interface{}{
-		"user_addr": accountAddress,
+		"user_addr": strings.ToLower(accountAddress),
 	}
 
 	for {
@@ -103,7 +105,7 @@ func getTotalUsdBalance(accountAddress string) float64 {
 		}
 
 		if err = json.Unmarshal(respBody, &responseData); err != nil {
-			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err.Error())
+			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 			continue
 		}
 
@@ -132,20 +134,20 @@ func getUsedChains(accountAddress string, path string) []string {
 	params := url.Values{}
 
 	if path == "/nft/used_chains" {
-		params.Set("user_addr", accountAddress)
+		params.Set("user_addr", strings.ToLower(accountAddress))
 
 		payload = map[string]interface{}{
-			"user_addr": accountAddress,
+			"user_addr": strings.ToLower(accountAddress),
 		}
 
 		responseData = &struct {
 			Data []string `json:"data"`
 		}{}
 	} else if path == "/user/used_chains" {
-		params.Set("id", accountAddress)
+		params.Set("id", strings.ToLower(accountAddress))
 
 		payload = map[string]interface{}{
-			"id": accountAddress,
+			"id": strings.ToLower(accountAddress),
 		}
 
 		responseData = &struct {
@@ -162,12 +164,12 @@ func getUsedChains(accountAddress string, path string) []string {
 		respBody, err := doRequest(accountAddress, baseURL, "GET", path, params, payload)
 
 		if err != nil {
-			log.Printf("%s", err.Error())
+			log.Printf("%s", err)
 			continue
 		}
 
-		if err := json.Unmarshal(respBody, &responseData); err != nil {
-			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err.Error())
+		if err = json.Unmarshal(respBody, &responseData); err != nil {
+			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 			continue
 		}
 
@@ -206,7 +208,7 @@ func getTokenBalances(accountAddress string, chains []string) map[string][]custo
 	path := "/token/balance_list"
 
 	params := url.Values{}
-	params.Set("user_addr", accountAddress)
+	params.Set("user_addr", strings.ToLower(accountAddress))
 
 	result := make(map[string][]customTypes.TokenBalancesResultData)
 
@@ -216,7 +218,7 @@ func getTokenBalances(accountAddress string, chains []string) map[string][]custo
 			var tokensResultData []customTypes.TokenBalancesResultData
 			params.Set("chain", currentChain)
 			payload := map[string]interface{}{
-				"user_addr": accountAddress,
+				"user_addr": strings.ToLower(accountAddress),
 				"chain":     currentChain,
 			}
 
@@ -228,7 +230,7 @@ func getTokenBalances(accountAddress string, chains []string) map[string][]custo
 			}
 
 			if err := json.Unmarshal(respBody, responseData); err != nil {
-				log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err.Error())
+				log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 				continue
 			}
 
@@ -278,10 +280,10 @@ func getPoolBalances(accountAddress string) map[string]map[string][]customTypes.
 	path := "/portfolio/project_list"
 
 	params := url.Values{}
-	params.Set("user_addr", accountAddress)
+	params.Set("user_addr", strings.ToLower(accountAddress))
 
 	payload := map[string]interface{}{
-		"user_addr": accountAddress,
+		"user_addr": strings.ToLower(accountAddress),
 	}
 
 	result := make(map[string]map[string][]customTypes.PoolBalancesResultData)
@@ -297,7 +299,7 @@ func getPoolBalances(accountAddress string) map[string]map[string][]customTypes.
 		responseData := &responseStruct{}
 
 		if err := json.Unmarshal(respBody, responseData); err != nil {
-			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err.Error())
+			log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
 			continue
 		}
 
@@ -346,9 +348,11 @@ func getNftBalances(accountAddress string, chains []string) map[string][]customT
 			Price *CustomBigFloat `json:"price"`
 		} `json:"spent_token"`
 	}
-
 	type responseStruct struct {
 		Data struct {
+			Job *struct {
+				Status string `json:"status"`
+			} `json:"job"`
 			Result struct {
 				Data []collectionData `json:"data"`
 			} `json:"result"`
@@ -361,13 +365,13 @@ func getNftBalances(accountAddress string, chains []string) map[string][]customT
 	result := make(map[string][]customTypes.NftBalancesResultData)
 
 	params := url.Values{}
-	params.Set("user_addr", accountAddress)
+	params.Set("user_addr", strings.ToLower(accountAddress))
 
 	for _, currentChain := range chains {
 		for {
 			params.Set("chain", currentChain)
 			payload := map[string]interface{}{
-				"user_addr": accountAddress,
+				"user_addr": strings.ToLower(accountAddress),
 				"chain":     currentChain,
 			}
 
@@ -375,12 +379,19 @@ func getNftBalances(accountAddress string, chains []string) map[string][]customT
 
 			if err != nil {
 				log.Printf("%s", err)
+				continue
 			}
 
 			responseData := &responseStruct{}
 
 			if err := json.Unmarshal(respBody, responseData); err != nil {
-				log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err.Error())
+				log.Printf("%s | Failed To Parse JSON Response: %s", accountAddress, err)
+				continue
+			}
+
+			if responseData.Data.Job != nil && responseData.Data.Job.Status == "pending" {
+				log.Printf("%s | NFT Balance Pending, sleeping 3 secs...", accountAddress)
+				time.Sleep(3 * time.Second)
 				continue
 			}
 
@@ -397,9 +408,9 @@ func getNftBalances(accountAddress string, chains []string) map[string][]customT
 				currentNftData.Amount.Float.Int(amountBigInt)
 				result[currentChain] = append(result[currentChain],
 					customTypes.NftBalancesResultData{
-						Name:     currentNftData.Name,
-						Amount:   currentNftData.Amount.Float,
-						PriceUSD: nftInUsd,
+						Name:       currentNftData.Name,
+						Amount:     currentNftData.Amount.Float,
+						BalanceUSD: nftInUsd,
 					})
 			}
 			break
@@ -409,7 +420,34 @@ func getNftBalances(accountAddress string, chains []string) map[string][]customT
 	return result
 }
 
+func SortByBalanceUSD[T any](slice []T, balanceUSDGetter func(T) *big.Float) {
+	sort.Slice(slice, func(i, j int) bool {
+		return balanceUSDGetter(slice[i]).Cmp(balanceUSDGetter(slice[j])) > 0
+	})
+}
+
+// Function to sort all entries within a map of slices
+func SortMapByBalanceUSD[T any](dataMap map[string][]T, balanceUSDGetter func(T) *big.Float) {
+	for key := range dataMap {
+		SortByBalanceUSD(dataMap[key], balanceUSDGetter)
+	}
+}
+
+func SortNestedMapByBalanceUSD[T any](data map[string]map[string][]T, getBalance func(T) *big.Float) {
+	for _, innerMap := range data {
+		for _, balances := range innerMap {
+			SortByBalanceUSD(balances, getBalance)
+		}
+	}
+}
+
 func ParseDebankAccount(accountData string) {
+	var (
+		tokenBalances map[string][]customTypes.TokenBalancesResultData
+		nftBalances   map[string][]customTypes.NftBalancesResultData
+		poolsData     map[string]map[string][]customTypes.PoolBalancesResultData
+	)
+
 	accountAddress, err := utils.GetAccountAddress(accountData)
 
 	if err != nil {
@@ -420,18 +458,43 @@ func ParseDebankAccount(accountData string) {
 	totalUsdBalance := getTotalUsdBalance(accountAddress)
 	log.Printf("%s | Total USD Balance: %f $", accountAddress, totalUsdBalance)
 
-	tokenChainsUsed := getUsedChains(accountAddress, "/user/used_chains")
-	log.Printf("%s | Token Chains Used: %d", accountAddress, len(tokenChainsUsed))
+	if utils.ConfigFile.DebankConfig.ParseTokens == true {
+		tokenChainsUsed := getUsedChains(accountAddress, "/user/used_chains")
+		log.Printf("%s | Token Chains Used: %d", accountAddress, len(tokenChainsUsed))
 
-	nftChainsUsed := getUsedChains(accountAddress, "/nft/used_chains")
-	log.Printf("%s | NFT Chains Used: %d", accountAddress, len(nftChainsUsed))
+		if len(tokenChainsUsed) > 0 {
+			tokenBalances = getTokenBalances(accountAddress, tokenChainsUsed)
+			log.Printf("%s | Successfully Parsed Tokens", accountAddress)
 
-	tokenBalances := getTokenBalances(accountAddress, tokenChainsUsed)
-	log.Printf("%s | Successfully Parsed Tokens", accountAddress)
-	nftBalances := getNftBalances(accountAddress, tokenChainsUsed)
-	log.Printf("%s | Successfully Parsed NFTs", accountAddress)
-	poolsData := getPoolBalances(accountAddress)
-	log.Printf("%s | Successfully Parsed Pools", accountAddress)
+			SortMapByBalanceUSD(tokenBalances, func(t customTypes.TokenBalancesResultData) *big.Float {
+				return t.BalanceUSD
+			})
+		}
+	}
+
+	if utils.ConfigFile.DebankConfig.ParseNfts == true {
+		nftChainsUsed := getUsedChains(accountAddress, "/nft/used_chains")
+		log.Printf("%s | NFT Chains Used: %d", accountAddress, len(nftChainsUsed))
+
+		if len(nftChainsUsed) > 0 {
+			nftBalances = getNftBalances(accountAddress, nftChainsUsed)
+			log.Printf("%s | Successfully Parsed NFTs", accountAddress)
+
+			SortMapByBalanceUSD(nftBalances, func(n customTypes.NftBalancesResultData) *big.Float {
+				return n.BalanceUSD
+			})
+		}
+	}
+
+	if utils.ConfigFile.DebankConfig.ParsePools == true {
+		poolsData = getPoolBalances(accountAddress)
+		log.Printf("%s | Successfully Parsed Pools", accountAddress)
+
+		SortNestedMapByBalanceUSD(poolsData, func(p customTypes.PoolBalancesResultData) *big.Float {
+			return p.BalanceUSD
+		})
+
+	}
 
 	utils.FormatResult(accountData, accountAddress, totalUsdBalance, tokenBalances, nftBalances, poolsData)
 }

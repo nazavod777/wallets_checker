@@ -23,7 +23,7 @@ func InitProxies() error {
 			continue
 		}
 
-		Proxies = append(Proxies, parsedProxy.GetAsString())
+		Proxies = append(Proxies, parsedProxy)
 	}
 
 	return nil

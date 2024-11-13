@@ -18,6 +18,9 @@
 ### data/proxies.txt
 - Прокси в любом формате (обязательно в начале строки указывайте тип прокси - http:// https:// socks4:// socks5://)
 
+### data/config.json
+- Включение/отключение парса токенов/nft/пулов
+
 # DONATE (_any evm_) - 0xDEADf12DE9A24b47Da0a43E1bA70B8972F5296F2
 # DONATE (_sol_) - 2Fw2wh1pN77ELg6sWnn5cZrTDCK5ibfnKymTuCXL8sPX
 # DONATE (_trx_) - TEAmkvFXJ6N6wzN4aS3HtgiM7XhnwRrtkW

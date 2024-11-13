@@ -1,28 +1,38 @@
 package utils
 
 import (
-	"debank_checker_v3/customTypes"
 	"fmt"
 	"regexp"
 )
 
-func ParseProxy(proxy string) (*customTypes.Proxy, error) {
-	re := regexp.MustCompile(`(?i)(?:(socks5|http|https)://)?(?:([a-zA-Z0-9._-]+):([a-zA-Z0-9._-]+)@)?([^:]+):(\d+)`)
+var proxyFormatsRegexp = []*regexp.Regexp{
+	// protocol://login:password@host:port
+	regexp.MustCompile(`^(?:(?P<protocol>.+)://)?(?P<login>[^:]+):(?P<password>[^@|:]+)[@|:](?P<host>[^:]+):(?P<port>\d+)$`),
+	// protocol://host:port@login:password
+	regexp.MustCompile(`^(?:(?P<protocol>.+)://)?(?P<host>[^:]+):(?P<port>\d+)[@|:](?P<login>[^:]+):(?P<password>[^:]+)$`),
+	// host:port
+	regexp.MustCompile(`^(?:(?P<protocol>.+)://)?(?P<host>[^:]+):(?P<port>\d+)$`),
+}
 
-	matches := re.FindStringSubmatch(proxy)
-	if matches == nil {
-		return nil, fmt.Errorf("invalid proxy format")
-	}
-	proxyData := &customTypes.Proxy{
-		Scheme:   matches[1],
-		User:     matches[2],
-		Password: matches[3],
-		IP:       matches[4],
-		Port:     matches[5],
-	}
-	if proxyData.Scheme == "" {
-		proxyData.Scheme = "http"
+func ParseProxy(proxy string) (string, error) {
+	for _, pattern := range proxyFormatsRegexp {
+		match := pattern.FindStringSubmatch(proxy)
+		if match != nil {
+			protocol := match[1]
+			if protocol == "" {
+				protocol = "http"
+			}
+			login := match[2]
+			password := match[3]
+			host := match[4]
+			port := match[5]
+
+			if login != "" && password != "" {
+				return fmt.Sprintf("%s://%s:%s@%s:%s", protocol, login, password, host, port), nil
+			}
+			return fmt.Sprintf("%s://%s:%s", protocol, host, port), nil
+		}
 	}
 
-	return proxyData, nil
+	return "", fmt.Errorf("invalid proxy format")
 }

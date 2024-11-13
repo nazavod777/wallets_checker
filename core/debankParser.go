@@ -426,7 +426,6 @@ func SortByBalanceUSD[T any](slice []T, balanceUSDGetter func(T) *big.Float) {
 	})
 }
 
-// Function to sort all entries within a map of slices
 func SortMapByBalanceUSD[T any](dataMap map[string][]T, balanceUSDGetter func(T) *big.Float) {
 	for key := range dataMap {
 		SortByBalanceUSD(dataMap[key], balanceUSDGetter)

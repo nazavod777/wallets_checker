@@ -68,7 +68,13 @@ func main() {
 	fmt.Printf("WebSite - nazavod.dev\nAntiDrain - antidrain.me\nTG - t.me/n4z4v0d\n\n")
 	defer handlePanic()
 
-	err := utils.InitProxies()
+	err := utils.ReadJson("./data/config.json", &utils.ConfigFile)
+
+	if err != nil {
+		log.Panicf("Error reading config file: %s", err)
+	}
+
+	err = utils.InitProxies()
 
 	if err != nil {
 		log.Panicf("%s", err)

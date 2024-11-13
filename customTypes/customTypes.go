@@ -1,7 +1,6 @@
 package customTypes
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -28,35 +27,6 @@ type NftBalancesResultData struct {
 	Amount   *big.Float `json:"amount"`
 	Name     string     `json:"name"`
 	PriceUSD *big.Float `json:"price_usd"`
-}
-
-type Proxy struct {
-	User     string
-	Password string
-	IP       string
-	Port     string
-	Scheme   string
-}
-
-func (p *Proxy) GetAsString() string {
-	var proxyString string
-
-	if p.User != "" && p.Password != "" {
-		proxyString = fmt.Sprintf("%s:%s@", p.User, p.Password)
-	}
-
-	proxyString += fmt.Sprintf("%s:%s", p.IP, p.Port)
-
-	if p.Scheme != "" {
-		if p.Scheme == "https" {
-			p.Scheme = "http"
-		}
-		proxyString = fmt.Sprintf("%s://%s", p.Scheme, proxyString)
-	} else {
-		proxyString = fmt.Sprintf("http://%s", proxyString)
-	}
-
-	return proxyString
 }
 
 type RabbyReturnData struct {

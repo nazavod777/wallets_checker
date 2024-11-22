@@ -22,55 +22,76 @@ func FormatResult(accountData string,
 	poolsData map[string]map[string][]customTypes.PoolBalancesResultData) {
 	var formattedResult string
 
+	formattedResult += fmt.Sprintf("==================== Address: %s (%f $)\n", accountAddress, totalUsdBalance)
 	formattedResult += fmt.Sprintf("==================== Account Data: %s\n", accountData)
-	formattedResult += fmt.Sprintf("==================== Address: %s\n", accountAddress)
-	formattedResult += fmt.Sprintf("==================== USD Balance: %f $\n", totalUsdBalance)
 
 	if ConfigFile.DebankConfig.ParseTokens == true && len(tokenBalances) > 0 {
-		formattedResult += fmt.Sprintf("\n========== Token Balances\n")
+		totalTokens := 0
+
+		for _, tokens := range tokenBalances {
+			totalTokens += len(tokens)
+		}
+
+		formattedResult += fmt.Sprintf("\n========== Token Balances (%d tokens)\n", totalTokens)
 
 		for _, chainName := range getKeys(tokenBalances) {
 			if len(tokenBalances[chainName]) < 1 {
 				continue
 			}
 
-			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
+			formattedResult += fmt.Sprintf("----- %s (%d tokens)\n", strings.ToUpper(chainName), len(tokenBalances[chainName]))
 
 			for _, tokenData := range tokenBalances[chainName] {
-				formattedResult += fmt.Sprintf("Name: %s | Balance (in usd): %s $ | Amount: %s\n", tokenData.Name, tokenData.BalanceUSD.Text('f', -1), tokenData.Amount.Text('f', -1))
+				formattedResult += fmt.Sprintf("    Name: %s | Balance (in usd): %s $ | Amount: %s | CA: %s\n", tokenData.Name, tokenData.BalanceUSD.Text('f', -1), tokenData.Amount.Text('f', -1), tokenData.ContractAddress)
 			}
+			formattedResult += "\n"
 		}
 	} else {
 		formattedResult += "\n"
 	}
 
 	if ConfigFile.DebankConfig.ParseNfts == true && len(nftBalances) > 0 {
-		formattedResult += fmt.Sprintf("\n========== NFT Balances\n")
+		totalNFTs := 0
+
+		for _, balances := range nftBalances {
+			totalNFTs += len(balances)
+		}
+
+		formattedResult += fmt.Sprintf("\n========== NFT Balances (%d nfts)\n", totalNFTs)
 
 		for _, chainName := range getKeys(nftBalances) {
 			if len(nftBalances[chainName]) < 1 {
 				continue
 			}
 
-			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
+			formattedResult += fmt.Sprintf("----- %s (%d nfts)\n", strings.ToUpper(chainName), len(nftBalances[chainName]))
 
 			for _, nftData := range nftBalances[chainName] {
-				formattedResult += fmt.Sprintf("Name: %s | Price (in usd): %s $ | Amount: %s\n", nftData.Name, nftData.BalanceUSD.Text('f', -1), nftData.Amount.Text('f', -1))
+				formattedResult += fmt.Sprintf("    Name: %s | Price (in usd): %s $ | Amount: %s\n", nftData.Name, nftData.BalanceUSD.Text('f', -1), nftData.Amount.Text('f', -1))
 			}
+			formattedResult += "\n"
 		}
 	} else {
 		formattedResult += "\n"
 	}
 
 	if ConfigFile.DebankConfig.ParsePools == true && len(poolsData) > 0 {
-		formattedResult += fmt.Sprintf("\n========== Pool Balances\n")
+		totalPools := 0
+
+		for _, chainPools := range poolsData {
+			for _, pools := range chainPools {
+				totalPools += len(pools)
+			}
+		}
+
+		formattedResult += fmt.Sprintf("\n========== Pool Balances (%d pools)\n", totalPools)
 
 		for _, chainName := range getKeys(poolsData) {
 			if len(poolsData[chainName]) < 1 {
 				continue
 			}
 
-			formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(chainName))
+			formattedResult += fmt.Sprintf("----- %s (%d pools)\n", strings.ToUpper(chainName), len(poolsData[chainName]))
 
 			for _, poolName := range getKeys(poolsData[chainName]) {
 				if len(poolsData[chainName][poolName]) < 1 {
@@ -80,8 +101,9 @@ func FormatResult(accountData string,
 				formattedResult += fmt.Sprintf("===== %s\n", strings.ToUpper(poolName))
 
 				for _, poolData := range poolsData[chainName][poolName] {
-					formattedResult += fmt.Sprintf("Name: %s | Balance (in usd): %s $ | Amount: %s\n", poolData.Name, poolData.BalanceUSD.Text('f', -1), poolData.Amount.Text('f', -1))
+					formattedResult += fmt.Sprintf("    Name: %s | Balance (in usd): %s $ | Amount: %s\n", poolData.Name, poolData.BalanceUSD.Text('f', -1), poolData.Amount.Text('f', -1))
 				}
+				formattedResult += "\n"
 			}
 		}
 	}

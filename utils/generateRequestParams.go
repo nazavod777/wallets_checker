@@ -1,79 +1,132 @@
 package utils
 
 import (
-	"bufio"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"debank_checker_v3/customTypes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/rand"
-	"os/exec"
+	"math/big"
+	mathRand "math/rand"
+	"net/url"
+	"sort"
 	"strings"
 	"time"
 )
-
-type RequestParams struct {
-	RandomAt string `json:"random_at"`
-	RandomID string `json:"random_id"`
-	UserAddr string `json:"user_addr"`
-}
 
 func generateRandomID() string {
 	const chars = "abcdef0123456789"
 	result := make([]byte, 32)
 	for i := range result {
-		result[i] = chars[rand.Intn(len(chars))]
+		result[i] = chars[mathRand.Intn(len(chars))]
 	}
 	return string(result)
 }
 
-func GenerateRequestParams(payload map[string]interface{}, method, path string) (customTypes.RequestParamsStruct, error) {
-	cmd := exec.Command("node", "js/main.js")
-	stdin, err := cmd.StdinPipe()
+func sortQueryString(queryString string) string {
+
+	params, _ := url.ParseQuery(queryString)
+
+	var paramKeys []string
+	for paramKey := range params {
+		paramKeys = append(paramKeys, paramKey)
+	}
+	sort.Strings(paramKeys)
+
+	var sortedQueryParams []string
+	for _, paramKey := range paramKeys {
+		sortedQueryParams = append(sortedQueryParams, fmt.Sprintf("%s=%s", paramKey, params[paramKey][0]))
+	}
+	return strings.Join(sortedQueryParams, "&")
+}
+
+func customSha256(data string) string {
+	h := sha256.New()
+	h.Write([]byte(data))
+	hashBytes := h.Sum(nil)
+
+	return hex.EncodeToString(hashBytes)
+}
+
+func generateNonce(length int) (string, error) {
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	nonce := make([]byte, length)
+	for i := 0; i < length; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", err
+		}
+		nonce[i] = letters[num.Int64()]
+	}
+
+	return "n_" + string(nonce), nil
+}
+
+func hmacSha256(key []byte, data []byte) string {
+	h := hmac.New(sha256.New, key)
+	h.Write(data)
+	hmacBytes := h.Sum(nil)
+
+	return hex.EncodeToString(hmacBytes)
+}
+
+func mapToQueryString(payload map[string]interface{}) string {
+	values := url.Values{}
+	for key, value := range payload {
+		values.Add(key, fmt.Sprintf("%v", value))
+	}
+	return values.Encode()
+}
+
+func GenerateSignature(payload map[string]interface{}, method string, path string) (error, customTypes.RequestParamsStruct) {
+	nonce, err := generateNonce(40)
+
 	if err != nil {
-		return customTypes.RequestParamsStruct{}, err
+		return err, customTypes.RequestParamsStruct{}
 	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return customTypes.RequestParamsStruct{}, err
-	}
-	if err := cmd.Start(); err != nil {
-		return customTypes.RequestParamsStruct{}, err
-	}
-	payloadData, err := json.Marshal(payload)
-	if err != nil {
-		return customTypes.RequestParamsStruct{}, err
-	}
-	method = strings.ToUpper(method)
-	fmt.Fprintf(stdin, "%s|%s|%s\n", payloadData, method, path)
-	stdin.Close()
-	scanner := bufio.NewScanner(stdout)
-	var outputData string
-	if scanner.Scan() {
-		outputData = scanner.Text()
-	}
-	if err := scanner.Err(); err != nil {
-		return customTypes.RequestParamsStruct{}, err
-	}
-	var returnData map[string]interface{}
-	if err := json.Unmarshal([]byte(outputData), &returnData); err != nil {
-		return customTypes.RequestParamsStruct{}, err
-	}
-	rTime := fmt.Sprintf("%d", time.Now().Unix())
+
+	queryString := mapToQueryString(payload)
+
+	timestamp := time.Now().Unix()
+	randStr := fmt.Sprintf(
+		"debank-api\n%s\n%d",
+		nonce,
+		timestamp,
+	)
+	randStrHash := customSha256(randStr)
+
+	requestParams := fmt.Sprintf(
+		"%s\n%s\n%s",
+		strings.ToUpper(method),
+		strings.ToLower(path),
+		sortQueryString(strings.ToLower(queryString)),
+	)
+	requestParamsHash := customSha256(requestParams)
+
 	info := map[string]interface{}{
-		"random_at": rTime,
+		"random_at": timestamp,
 		"random_id": generateRandomID(),
-		"user_addr": "", // Set to empty as per Python code's default value
+		"user_addr": "",
 	}
 	accountHeader, err := json.Marshal(info)
+
 	if err != nil {
-		return customTypes.RequestParamsStruct{}, err
+		return err, customTypes.RequestParamsStruct{}
 	}
-	returnData["account_header"] = string(accountHeader)
-	requestParams := customTypes.RequestParamsStruct{
+
+	signature := hmacSha256(
+		[]byte(randStrHash),
+		[]byte(requestParamsHash),
+	)
+
+	result := customTypes.RequestParamsStruct{
 		AccountHeader: string(accountHeader),
-		Nonce:         fmt.Sprintf("%v", returnData["nonce"]),     // Assuming "nonce" exists in returnData
-		Signature:     fmt.Sprintf("%v", returnData["signature"]), // Assuming "signature" exists in returnData
-		Timestamp:     rTime,
+		Nonce:         fmt.Sprintf("%v", nonce),
+		Signature:     fmt.Sprintf("%v", signature),
+		Timestamp:     fmt.Sprintf("%d", timestamp),
 	}
-	return requestParams, nil
+
+	return nil, result
 }

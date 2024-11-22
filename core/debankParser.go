@@ -43,7 +43,7 @@ func doRequest(accountAddress string,
 	payload map[string]interface{}) ([]byte, error) {
 	client := GetClient()
 
-	requestParams, err := utils.GenerateRequestParams(payload, strings.ToUpper(method), path)
+	err, requestParams := utils.GenerateSignature(payload, strings.ToUpper(method), path)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s | Failed to generate request params: %v", accountAddress, err)
@@ -193,10 +193,11 @@ func getUsedChains(accountAddress string, path string) []string {
 
 func getTokenBalances(accountAddress string, chains []string) map[string][]customTypes.TokenBalancesResultData {
 	type tokenData struct {
-		Amount  CustomBigFloat  `json:"amount"`
-		Balance big.Int         `json:"balance"`
-		Name    string          `json:"name"`
-		Price   *CustomBigFloat `json:"price"`
+		Amount          CustomBigFloat  `json:"amount"`
+		Balance         big.Int         `json:"balance"`
+		Name            string          `json:"name"`
+		Price           *CustomBigFloat `json:"price"`
+		ContractAddress string          `json:"id"`
 	}
 
 	type responseStruct struct {
@@ -242,9 +243,10 @@ func getTokenBalances(accountAddress string, chains []string) map[string][]custo
 					tokenInUsd = new(big.Float)
 				}
 				tokensResultData = append(tokensResultData, customTypes.TokenBalancesResultData{
-					Name:       currentToken.Name,
-					BalanceUSD: tokenInUsd,
-					Amount:     currentToken.Amount.Float,
+					Name:            currentToken.Name,
+					BalanceUSD:      tokenInUsd,
+					ContractAddress: currentToken.ContractAddress,
+					Amount:          currentToken.Amount.Float,
 				})
 			}
 

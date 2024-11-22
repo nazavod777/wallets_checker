@@ -12,9 +12,10 @@ type RequestParamsStruct struct {
 }
 
 type TokenBalancesResultData struct {
-	Amount     *big.Float `json:"amount"`
-	Name       string     `json:"name"`
-	BalanceUSD *big.Float `json:"balance_usd"`
+	Amount          *big.Float `json:"amount"`
+	Name            string     `json:"name"`
+	ContractAddress string     `json:"contract_address"`
+	BalanceUSD      *big.Float `json:"balance_usd"`
 }
 
 type PoolBalancesResultData struct {

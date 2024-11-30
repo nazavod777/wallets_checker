@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 	"regexp"
 	"strings"
@@ -20,7 +21,35 @@ func isMnemonic(input string) (bool, string) {
 		return false, ""
 	}
 
-	privateKey, err := crypto.ToECDSA(seed[:32])
+	masterKey, err := bip32.NewMasterKey(seed)
+	if err != nil {
+		return false, ""
+	}
+
+	// Используем путь BIP-44 для Ethereum: m/44'/60'/0'/0/0
+	purpose, err := masterKey.NewChildKey(bip32.FirstHardenedChild + 44) // m/44'
+	if err != nil {
+		return false, ""
+	}
+	coinType, err := purpose.NewChildKey(bip32.FirstHardenedChild + 60) // m/44'/60'
+	if err != nil {
+		return false, ""
+	}
+	account, err := coinType.NewChildKey(bip32.FirstHardenedChild + 0) // m/44'/60'/0'
+	if err != nil {
+		return false, ""
+	}
+	change, err := account.NewChildKey(0) // m/44'/60'/0'/0
+	if err != nil {
+		return false, ""
+	}
+	addressKey, err := change.NewChildKey(0) // m/44'/60'/0'/0/0
+	if err != nil {
+		return false, ""
+	}
+
+	// Получение приватного ключа и вычисление адреса
+	privateKey, err := crypto.ToECDSA(addressKey.Key)
 	if err != nil {
 		return false, ""
 	}

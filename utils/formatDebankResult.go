@@ -2,6 +2,7 @@ package utils
 
 import (
 	"debank_checker_v3/customTypes"
+	"debank_checker_v3/global"
 	"fmt"
 	"strings"
 )
@@ -25,7 +26,7 @@ func FormatResult(accountData string,
 	formattedResult += fmt.Sprintf("==================== Address: %s (%f $)\n", accountAddress, totalUsdBalance)
 	formattedResult += fmt.Sprintf("==================== Account Data: %s\n", accountData)
 
-	if ConfigFile.DebankConfig.ParseTokens == true && len(tokenBalances) > 0 {
+	if global.ConfigFile.DebankConfig.ParseTokens == true && len(tokenBalances) > 0 {
 		totalTokens := 0
 
 		for _, tokens := range tokenBalances {
@@ -50,7 +51,7 @@ func FormatResult(accountData string,
 		formattedResult += "\n"
 	}
 
-	if ConfigFile.DebankConfig.ParseNfts == true && len(nftBalances) > 0 {
+	if global.ConfigFile.DebankConfig.ParseNfts == true && len(nftBalances) > 0 {
 		totalNFTs := 0
 
 		for _, balances := range nftBalances {
@@ -75,7 +76,7 @@ func FormatResult(accountData string,
 		formattedResult += "\n"
 	}
 
-	if ConfigFile.DebankConfig.ParsePools == true && len(poolsData) > 0 {
+	if global.ConfigFile.DebankConfig.ParsePools == true && len(poolsData) > 0 {
 		totalPools := 0
 
 		for _, chainPools := range poolsData {

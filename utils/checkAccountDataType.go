@@ -11,55 +11,53 @@ import (
 	"strings"
 )
 
-func isMnemonic(input string) (bool, string) {
+func isMnemonic(input string) (bool, string, string) {
 	if !bip39.IsMnemonicValid(input) {
-		return false, ""
+		return false, "", ""
 	}
 
 	seed, err := bip39.NewSeedWithErrorChecking(input, "")
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 
 	masterKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 
 	purpose, err := masterKey.NewChildKey(bip32.FirstHardenedChild + 44)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 	coinType, err := purpose.NewChildKey(bip32.FirstHardenedChild + 60)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 	account, err := coinType.NewChildKey(bip32.FirstHardenedChild + 0)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 	change, err := account.NewChildKey(0)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 	addressKey, err := change.NewChildKey(0)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 
 	privateKey, err := crypto.ToECDSA(addressKey.Key)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 
 	address := crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
-	return true, address
+	return true, hex.EncodeToString(crypto.FromECDSA(privateKey)), address
 }
 
 func isPrivateKey(input string) (bool, string) {
-	if strings.HasPrefix(input, "0x") {
-		input = input[2:]
-	}
+	input = RemoveHexPrefix(input)
 
 	if len(input) != 64 {
 		return false, ""
@@ -96,18 +94,18 @@ func isEthAddress(input string) (bool, string) {
 	return loweredInput == strings.ToLower(address.Hex()), address.Hex()
 }
 
-func GetAccountAddress(target string) (string, error) {
-	if valid, address := isMnemonic(target); valid {
-		return address, nil
+func GetAccountData(target string) (string, int, string, error) {
+	if valid, privateKey, address := isMnemonic(target); valid {
+		return address, 1, privateKey, nil
 	}
 
 	if valid, address := isPrivateKey(target); valid {
-		return address, nil
+		return address, 2, target, nil
 	}
 
 	if valid, address := isEthAddress(target); valid {
-		return address, nil
+		return address, 3, "", nil
 	}
 
-	return "", fmt.Errorf("wrong account credentials")
+	return "", 0, "", fmt.Errorf("wrong account credentials")
 }

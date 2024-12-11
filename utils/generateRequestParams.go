@@ -108,7 +108,7 @@ func GenerateSignature(payload map[string]interface{}, method string, path strin
 	info := map[string]interface{}{
 		"random_at": timestamp,
 		"random_id": generateRandomID(),
-		"user_addr": "",
+		"user_addr": nil,
 	}
 	accountHeader, err := json.Marshal(info)
 

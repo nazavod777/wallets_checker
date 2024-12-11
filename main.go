@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"debank_checker_v3/core"
+	"debank_checker_v3/global"
 	"debank_checker_v3/utils"
 	"fmt"
 	"log"
@@ -43,6 +44,8 @@ func processAccounts(accounts []string, threads int, userAction int) {
 			if userAction == 1 {
 				core.ParseDebankAccount(acc)
 			} else if userAction == 2 {
+				core.DebankL2BalanceParser(acc)
+			} else if userAction == 3 {
 				core.ParseRabbyAccount(acc)
 			}
 			<-sem
@@ -68,7 +71,7 @@ func main() {
 	fmt.Printf("WebSite - nazavod.dev\nAntiDrain - antidrain.me\nTG - t.me/n4z4v0d\n\n")
 	defer handlePanic()
 
-	err := utils.ReadJson("./data/config.json", &utils.ConfigFile)
+	err := utils.ReadJson("./data/config.json", &global.ConfigFile)
 
 	if err != nil {
 		log.Panicf("Error reading config file: %s", err)
@@ -101,11 +104,11 @@ func main() {
 		log.Panicf("Wrong Threads Number: %v", err)
 	}
 
-	fmt.Print("1. Debank Checker\n2. Rabby Checker\nEnter Your Choice: ")
+	fmt.Print("1. Debank Checker\n2. Debank L2 Balance Parser\n3. Rabby Checker\nEnter Your Choice: ")
 
 	userAction, err := strconv.Atoi(inputUser())
 
-	if err != nil || (userAction != 1 && userAction != 2) {
+	if err != nil || (userAction != 1 && userAction != 2 && userAction != 3) {
 		log.Panicf("Wrong User Action Number: %v", err)
 	}
 

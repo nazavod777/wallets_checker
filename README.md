@@ -6,6 +6,7 @@
 ### Функции:
 * _Возможность использования Debank API / Rabby API_
 * _Парсинг Общего баланса (+ Pool Balance / + Token Balance / + NFT Balance)_
+* _Парсинг L2 Debank Balance_
 * _Многопоточность_
 * _Поддержка Proxy (http / https / socks4/ socks5)_
 * _Сортировка результатов по балансу (0, 0-1, 100-500, 500-1000, 1000+ $)_

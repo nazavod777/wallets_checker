@@ -2,6 +2,7 @@ package core
 
 import (
 	"debank_checker_v3/customTypes"
+	"debank_checker_v3/global"
 	"debank_checker_v3/utils"
 	"encoding/json"
 	"fmt"
@@ -41,22 +42,40 @@ func doRequest(accountAddress string,
 	path string,
 	params url.Values,
 	payload map[string]interface{}) ([]byte, error) {
-	client := GetClient()
+	client := GetClient(utils.GetProxy())
+	var err error
+	var requestParams customTypes.RequestParamsStruct
+	req := fasthttp.AcquireRequest()
 
-	err, requestParams := utils.GenerateSignature(payload, strings.ToUpper(method), path)
+	if strings.ToUpper(method) == fasthttp.MethodPost {
+		if payload != nil {
+			body, err := json.Marshal(payload)
+
+			if err != nil {
+				return nil, fmt.Errorf("%s | Failed to marshal payload: %v", accountAddress, err)
+			}
+
+			req.SetBody(body)
+			req.Header.SetContentType("application/json")
+		}
+
+		err, requestParams = utils.GenerateSignature(nil, strings.ToUpper(method), path)
+
+	} else {
+		err, requestParams = utils.GenerateSignature(payload, strings.ToUpper(method), path)
+	}
 
 	if err != nil {
 		return nil, fmt.Errorf("%s | Failed to generate request params: %v", accountAddress, err)
 	}
 
-	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 	req.SetRequestURI(fmt.Sprintf("%s?%s", baseURL, params.Encode()))
-	req.Header.SetMethod(fasthttp.MethodGet)
+	req.Header.SetMethod(strings.ToUpper(method))
 	req.Header.Set("accept", "*/*")
 	req.Header.Set("accept-language", "ru,en;q=0.9,vi;q=0.8,es;q=0.7,cy;q=0.6")
 	req.Header.Set("origin", "https://debank.com")
-	req.Header.Set("referer", "https://debank.com")
+	req.Header.Set("referer", "https://debank.com/")
 	req.Header.Set("source", "web")
 	req.Header.Set("x-api-ver", "v2")
 	req.Header.Set("account", requestParams.AccountHeader)
@@ -449,7 +468,7 @@ func ParseDebankAccount(accountData string) {
 		poolsData     map[string]map[string][]customTypes.PoolBalancesResultData
 	)
 
-	accountAddress, err := utils.GetAccountAddress(accountData)
+	accountAddress, _, _, err := utils.GetAccountData(accountData)
 
 	if err != nil {
 		log.Printf("%s", err)
@@ -459,7 +478,7 @@ func ParseDebankAccount(accountData string) {
 	totalUsdBalance := getTotalUsdBalance(accountAddress)
 	log.Printf("%s | Total USD Balance: %f $", accountAddress, totalUsdBalance)
 
-	if utils.ConfigFile.DebankConfig.ParseTokens == true {
+	if global.ConfigFile.DebankConfig.ParseTokens == true {
 		tokenChainsUsed := getUsedChains(accountAddress, "/user/used_chains")
 		log.Printf("%s | Token Chains Used: %d", accountAddress, len(tokenChainsUsed))
 
@@ -473,7 +492,7 @@ func ParseDebankAccount(accountData string) {
 		}
 	}
 
-	if utils.ConfigFile.DebankConfig.ParseNfts == true {
+	if global.ConfigFile.DebankConfig.ParseNfts == true {
 		nftChainsUsed := getUsedChains(accountAddress, "/nft/used_chains")
 		log.Printf("%s | NFT Chains Used: %d", accountAddress, len(nftChainsUsed))
 
@@ -487,7 +506,7 @@ func ParseDebankAccount(accountData string) {
 		}
 	}
 
-	if utils.ConfigFile.DebankConfig.ParsePools == true {
+	if global.ConfigFile.DebankConfig.ParsePools == true {
 		poolsData = getPoolBalances(accountAddress)
 		log.Printf("%s | Successfully Parsed Pools", accountAddress)
 

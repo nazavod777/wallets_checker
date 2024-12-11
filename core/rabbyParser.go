@@ -37,7 +37,8 @@ func getTotalBalance(accountAddress string) (float64, []customTypes.RabbyReturnD
 	}
 
 	for {
-		client := GetClient()
+		randomProxy := utils.GetProxy()
+		client := GetClient(randomProxy)
 		var result []customTypes.RabbyReturnData
 
 		req := fasthttp.AcquireRequest()
@@ -87,7 +88,7 @@ func getTotalBalance(accountAddress string) (float64, []customTypes.RabbyReturnD
 }
 
 func ParseRabbyAccount(accountData string) {
-	accountAddress, err := utils.GetAccountAddress(accountData)
+	accountAddress, _, _, err := utils.GetAccountData(accountData)
 
 	if err != nil {
 		log.Printf("%s", err)

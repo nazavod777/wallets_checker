@@ -41,4 +41,5 @@ type ConfigStruct struct {
 		ParseNfts   bool `json:"parse_nfts"`
 		ParsePools  bool `json:"parse_pools"`
 	} `json:"debank_config"`
+	TwoCaptchaApiKey string `json:"2captcha_apikey"`
 }

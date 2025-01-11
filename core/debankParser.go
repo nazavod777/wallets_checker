@@ -131,8 +131,7 @@ func getTotalUsdBalance(accountAddress string) float64 {
 		usdValueList := responseData.Data.UsdValueList
 
 		if len(usdValueList) < 1 {
-			log.Printf("%s | UsdValueList is Empty", accountAddress)
-			continue
+			return 0
 		}
 
 		lastEntry := usdValueList[len(usdValueList)-1]
@@ -463,9 +462,11 @@ func SortNestedMapByBalanceUSD[T any](data map[string]map[string][]T, getBalance
 
 func ParseDebankAccount(accountData string) {
 	var (
-		tokenBalances map[string][]customTypes.TokenBalancesResultData
-		nftBalances   map[string][]customTypes.NftBalancesResultData
-		poolsData     map[string]map[string][]customTypes.PoolBalancesResultData
+		tokenBalances   map[string][]customTypes.TokenBalancesResultData
+		nftBalances     map[string][]customTypes.NftBalancesResultData
+		poolsData       map[string]map[string][]customTypes.PoolBalancesResultData
+		tokenChainsUsed []string
+		nftChainsUsed   []string
 	)
 
 	accountAddress, _, _, err := utils.GetAccountData(accountData)
@@ -478,8 +479,8 @@ func ParseDebankAccount(accountData string) {
 	totalUsdBalance := getTotalUsdBalance(accountAddress)
 	log.Printf("%s | Total USD Balance: %f $", accountAddress, totalUsdBalance)
 
-	if global.ConfigFile.DebankConfig.ParseTokens == true {
-		tokenChainsUsed := getUsedChains(accountAddress, "/user/used_chains")
+	if global.ConfigFile.DebankConfig.ParseTokens && totalUsdBalance > 0 == true {
+		tokenChainsUsed = getUsedChains(accountAddress, "/user/used_chains")
 		log.Printf("%s | Token Chains Used: %d", accountAddress, len(tokenChainsUsed))
 
 		if len(tokenChainsUsed) > 0 {
@@ -493,7 +494,7 @@ func ParseDebankAccount(accountData string) {
 	}
 
 	if global.ConfigFile.DebankConfig.ParseNfts == true {
-		nftChainsUsed := getUsedChains(accountAddress, "/nft/used_chains")
+		nftChainsUsed = getUsedChains(accountAddress, "/nft/used_chains")
 		log.Printf("%s | NFT Chains Used: %d", accountAddress, len(nftChainsUsed))
 
 		if len(nftChainsUsed) > 0 {
@@ -506,7 +507,7 @@ func ParseDebankAccount(accountData string) {
 		}
 	}
 
-	if global.ConfigFile.DebankConfig.ParsePools == true {
+	if global.ConfigFile.DebankConfig.ParsePools && totalUsdBalance > 0 == true {
 		poolsData = getPoolBalances(accountAddress)
 		log.Printf("%s | Successfully Parsed Pools", accountAddress)
 
@@ -516,5 +517,6 @@ func ParseDebankAccount(accountData string) {
 
 	}
 
-	utils.FormatResult(accountData, accountAddress, totalUsdBalance, tokenBalances, nftBalances, poolsData)
+	utils.FormatResult(accountData, accountAddress, totalUsdBalance, len(tokenChainsUsed), len(nftChainsUsed),
+		tokenBalances, nftBalances, poolsData)
 }

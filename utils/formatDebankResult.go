@@ -18,12 +18,15 @@ func getKeys[T any](m map[string]T) []string {
 func FormatResult(accountData string,
 	accountAddress string,
 	totalUsdBalance float64,
+	tokensChainsCount int,
+	nftChainsCount int,
 	tokenBalances map[string][]customTypes.TokenBalancesResultData,
 	nftBalances map[string][]customTypes.NftBalancesResultData,
 	poolsData map[string]map[string][]customTypes.PoolBalancesResultData) {
 	var formattedResult string
 
-	formattedResult += fmt.Sprintf("==================== Address: %s (%f $)\n", accountAddress, totalUsdBalance)
+	formattedResult += fmt.Sprintf("==================== Address: %s (%f $ | tokens chains: %d | nft chains: %d)\n",
+		accountAddress, totalUsdBalance, tokensChainsCount, nftChainsCount)
 	formattedResult += fmt.Sprintf("==================== Account Data: %s\n", accountData)
 
 	if global.ConfigFile.DebankConfig.ParseTokens == true && len(tokenBalances) > 0 {

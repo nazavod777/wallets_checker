@@ -21,6 +21,7 @@
 
 ### data/config.json
 - Включение/отключение парса токенов/nft/пулов
+- 2captcha_apikey - apikey с [2captcha](https://2captcha.com/?from=20455942)
 
 # DONATE (_any evm_) - 0xDEADf12DE9A24b47Da0a43E1bA70B8972F5296F2
 # DONATE (_sol_) - 2Fw2wh1pN77ELg6sWnn5cZrTDCK5ibfnKymTuCXL8sPX

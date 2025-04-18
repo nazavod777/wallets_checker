@@ -1,122 +1,92 @@
 package main
 
 import (
-	"bufio"
 	"debank_checker_v3/core"
+	"debank_checker_v3/core/debank"
+	debankl2 "debank_checker_v3/core/debankL2"
 	"debank_checker_v3/global"
-	"debank_checker_v3/utils"
+	"debank_checker_v3/inits"
+	"debank_checker_v3/util"
 	"fmt"
-	"log"
-	"os"
+	"path/filepath"
 	"strconv"
-	"strings"
-	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func inputUser() string {
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-
-	return strings.TrimSpace(scanner.Text())
-}
-
-func ensureDir(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.Mkdir(path, os.ModePerm); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func processAccounts(accounts []string, threads int, userAction int) {
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, threads)
-
-	for _, account := range accounts {
-		wg.Add(1)
-		sem <- struct{}{}
-
-		go func(acc string) {
-			defer wg.Done()
-
-			if userAction == 1 {
-				core.ParseDebankAccount(acc)
-			} else if userAction == 2 {
-				core.DebankL2BalanceParser(acc)
-			} else if userAction == 3 {
-				core.ParseRabbyAccount(acc)
-			}
-			<-sem
-		}(account)
-	}
-
-	wg.Wait()
-}
-
-func handlePanic() {
-	if r := recover(); r != nil {
-		log.Printf("Unexpected Error: %v", r)
-		fmt.Println("Press Enter to Exit..")
-		_, err := fmt.Scanln()
-		if err != nil {
-			os.Exit(1)
-		}
-		os.Exit(1)
-	}
-}
-
 func main() {
-	fmt.Printf("WebSite - nazavod.dev\nAntiDrain - antidrain.me\nTG - t.me/n4z4v0d\n\n")
-	defer handlePanic()
+	defer inits.HandlePanic()
 
-	err := utils.ReadJson("./data/config.json", &global.ConfigFile)
+	logFile := inits.InitLog()
+	defer func() {
+		if err := logFile.Close(); err != nil {
+			log.Errorf("Error closing log file: %s", err)
+		}
+	}()
 
-	if err != nil {
-		log.Panicf("Error reading config file: %s", err)
+	fmt.Println("Website: nazavod.dev")
+	fmt.Println("AntiDrain: antidrain.me")
+	fmt.Println("Telegram: t.me/n4z4v0d")
+	fmt.Println()
+
+	// Init proxies
+	if err := util.InitProxies(filepath.Join("config", "proxies.txt")); err != nil {
+		log.Panicf("Failed to initialize proxies: %s", err)
 	}
 
-	err = utils.InitProxies()
+	// Init clients
+	inits.InitClients()
 
-	if err != nil {
-		log.Panicf("%s", err)
+	// Read config
+	if err := util.ReadJSONFile("./config/config.json", &global.ConfigFile); err != nil {
+		log.Panicf("Failed to read config file: %s", err)
 	}
 
-	err = ensureDir("./results")
-
-	if err != nil {
-		log.Panicf("Error When Creating Results Directory: %v", err)
+	// Ensure results dir
+	if err := inits.EnsureDir("./results"); err != nil {
+		log.Panicf("Failed to create results directory: %v", err)
 	}
 
-	accountsList, err := utils.ReadFileByRows("data/accounts.txt")
-
+	// Read accounts
+	accounts, err := util.ReadFileByRows("config/accounts.txt")
 	if err != nil {
-		log.Panicf("Error When Reading Accounts File: %v", err)
+		log.Panicf("Failed to read accounts file: %v", err)
 	}
 
-	fmt.Printf("Successfully Loaded %d Accounts // %d Proxies\n\n", len(accountsList), len(utils.Proxies))
+	global.TargetProgress = len(accounts)
+	global.CurrentProgress = 1
+
+	fmt.Printf("Successfully loaded %d accounts // %d proxies\n\n", len(accounts), len(util.Proxies))
 	fmt.Print("Threads: ")
 
-	threads, err := strconv.Atoi(inputUser())
-
-	if err != nil {
-		log.Panicf("Wrong Threads Number: %v", err)
+	threads, err := strconv.Atoi(inits.ReadUserInput())
+	if err != nil || threads <= 0 {
+		log.Panicf("Invalid number of threads: %v", err)
 	}
 
-	fmt.Print("1. Debank Checker\n2. Debank L2 Balance Parser\n3. Rabby Checker\nEnter Your Choice: ")
+	fmt.Print("1. Debank Checker\n2. Debank L2 Balance Parser\nEnter your choice: ")
 
-	userAction, err := strconv.Atoi(inputUser())
+	action, err := strconv.Atoi(inits.ReadUserInput())
+	if err != nil || (action < 1 || action > 2) {
+		log.Panicf("Invalid action number: %v", err)
+	}
 
-	if err != nil || (userAction != 1 && userAction != 2 && userAction != 3) {
-		log.Panicf("Wrong User Action Number: %v", err)
+	var parser core.AccountParser
+
+	switch action {
+	case 1:
+		parser = debank.ParseDebank{}
+	case 2:
+		parser = debankl2.L2ParserDebank{}
+	default:
+		log.Panicf("Unknown parser selected")
 	}
 
 	fmt.Println()
+	inits.ProcessAccounts(accounts, threads, parser)
 
-	processAccounts(accountsList, threads, userAction)
-
-	fmt.Print("The Work Has Been Successfully Finished..\n\n")
-	fmt.Print("Press Enter to Exit..")
-	inputUser()
+	fmt.Println("The work has been successfully completed.")
+	fmt.Println()
+	fmt.Print("Press Enter to exit...")
+	_ = inits.ReadUserInput()
 }

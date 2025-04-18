@@ -1,0 +1,8 @@
+{
+  "debank_config": {
+    "parse_tokens": true,
+    "parse_nfts": false,
+    "parse_pools": true
+  },
+  "2captcha_apikey": ""
+}
